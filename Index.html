@@ -1,0 +1,408 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    
+    <!-- WEB APP OPTIMIZATION TAGS -->
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="apple-mobile-web-app-title" content="Reset Hub">
+    <meta name="theme-color" content="#020617">
+    <link rel="apple-touch-icon" href="logo.png">
+    
+    <title>MW Coaching Pro | 6 Week Reset Hub</title>
+    <!-- Core Engine -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+    <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+    <!-- Stable Icons -->
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800;900&display=swap');
+        
+        * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+        body { 
+            font-family: 'Inter', sans-serif; 
+            background-color: #020617; 
+            color: #f8fafc;
+            overscroll-behavior-y: contain;
+            margin: 0; padding: 0; width: 100vw; overflow-x: hidden;
+        }
+
+        .no-scrollbar::-webkit-scrollbar { display: none; }
+        .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+        
+        .glass-card {
+            background: rgba(30, 41, 59, 0.4);
+            backdrop-filter: blur(12px);
+            border: 1px solid rgba(255, 255, 255, 0.05);
+        }
+
+        .neon-border-orange { border: 1px solid rgba(249, 115, 22, 0.3); }
+        
+        .nav-dock {
+            background: rgba(15, 23, 42, 0.98);
+            backdrop-filter: blur(25px);
+            border-top: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        /* Splash Screen */
+        #splash-master {
+            position: fixed; top: 0; left: 0; width: 100%; height: 100dvh;
+            background-color: #020617; z-index: 10000;
+            display: flex; flex-direction: column; align-items: center; justify-content: center;
+            text-align: center; padding-bottom: 15vh;
+        }
+
+        .logo-glow { filter: drop-shadow(0 0 20px rgba(249, 115, 22, 0.5)); }
+
+        .animate-fade-in { animation: fadeIn 0.4s ease-out forwards; }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+        
+        input[type="number"], input[type="text"], textarea, select { outline: none; border: none; }
+        input::-webkit-outer-spin-button, input::-webkit-inner-spin-button { -webkit-appearance: none; margin: 0; }
+        
+        .btn-active:active { transform: scale(0.95); }
+
+        input[type=range] {
+            -webkit-appearance: none;
+            width: 100%;
+            background: transparent;
+        }
+        input[type=range]::-webkit-slider-runnable-track {
+            width: 100%;
+            height: 6px;
+            cursor: pointer;
+            background: rgba(255,255,255,0.1);
+            border-radius: 10px;
+        }
+        input[type=range]::-webkit-slider-thumb {
+            height: 20px;
+            width: 20px;
+            border-radius: 50%;
+            background: #f97316;
+            cursor: pointer;
+            -webkit-appearance: none;
+            margin-top: -7px;
+            box-shadow: 0 0 10px rgba(249, 115, 22, 0.5);
+        }
+    </style>
+</head>
+<body>
+    <div id="root"></div>
+
+    <script type="text/babel">
+        const { useState, useEffect, useRef } = React;
+
+        const Icon = ({ name, size = 24, className = "" }) => {
+            useEffect(() => { if (window.lucide) window.lucide.createIcons(); }, [name]);
+            return <i data-lucide={name} style={{ width: size, height: size }} className={`inline-block ${className}`}></i>;
+        };
+
+        const apiKey = "AIzaSyDFfRC-7onKqU4WlXUfgR8W5sBX9DQWLkw";
+
+        const App = () => {
+            const [activeTab, setActiveTab] = useState('workout');
+            const [statsSubTab, setStatsSubTab] = useState('progress');
+            const [showSplash, setShowSplash] = useState(true);
+            const [syncLoading, setSyncLoading] = useState(false);
+            const [statusMsg, setStatusMsg] = useState(null);
+            const [currentQuote, setCurrentQuote] = useState("");
+            const [manualCalInput, setManualCalInput] = useState("");
+
+            const quotes = ["Win the morning, win the day.", "Discipline > Motivation.", "Success is rented, rent is due every day.", "Rise, grind, and inspire."];
+
+            const [userData, setUserData] = useState(() => {
+                const saved = localStorage.getItem('mw_elite_v13_reset_hub');
+                return saved ? JSON.parse(saved) : {
+                    userName: "",
+                    googleSheetUrl: "",
+                    currentWeek: "Week One Audit",
+                    nutrition: { calories: 0, protein: 0, water: 0 },
+                    weight: { current: 0, initial: 0, bestSteps: 0 },
+                    measures: { waist: 0, hips: 0 },
+                    wellness: { sleep: 7, energy: 7 },
+                    workout: { completedDays: [], steps: 0 },
+                    brainDump: ""
+                };
+            });
+
+            useEffect(() => { localStorage.setItem('mw_elite_v13_reset_hub', JSON.stringify(userData)); }, [userData]);
+            
+            useEffect(() => {
+                setCurrentQuote(quotes[Math.floor(Math.random() * quotes.length)]);
+                setTimeout(() => setShowSplash(false), 2500);
+            }, []);
+
+            const showStatus = (msg, type = 'info') => {
+                setStatusMsg({ msg, type });
+                setTimeout(() => setStatusMsg(null), 5000);
+            };
+
+            const handleManualInput = (key, subKey) => {
+                const currentVal = subKey ? userData[key][subKey] : userData[key];
+                const input = prompt(`Enter exact ${subKey || key}:`, currentVal);
+                if (input !== null) {
+                    const val = parseFloat(input) || 0;
+                    if (subKey) {
+                        setUserData(prev => ({ ...prev, [key]: { ...prev[key], [subKey]: val } }));
+                    } else {
+                        setUserData(prev => ({ ...prev, [key]: val }));
+                    }
+                }
+            };
+
+            const handleManualCalLog = () => {
+                const cals = parseInt(manualCalInput);
+                if (!isNaN(cals) && cals > 0) {
+                    setUserData(prev => ({ ...prev, nutrition: { ...prev.nutrition, calories: prev.nutrition.calories + cals } }));
+                    setManualCalInput("");
+                    showStatus(`LOGGED: ${cals} kcal`, "success");
+                }
+            };
+
+            const syncToPortal = async () => {
+                if (!userData.googleSheetUrl || !userData.userName) return showStatus("SETUP REQUIRED.", "error");
+                setSyncLoading(true);
+                const newBestSteps = Math.max(userData.weight.bestSteps, userData.workout.steps);
+
+                const payload = {
+                    name: userData.userName,
+                    week: userData.currentWeek,
+                    weight: userData.weight.current,
+                    waist: userData.measures.waist,
+                    hips: userData.measures.hips,
+                    sleep: userData.wellness.sleep,
+                    energy: userData.wellness.energy,
+                    steps: userData.workout.steps,
+                    calories: userData.nutrition.calories,
+                    protein: userData.nutrition.protein,
+                    water: userData.nutrition.water,
+                    brainDump: userData.brainDump
+                };
+
+                try {
+                    await fetch(userData.googleSheetUrl, { 
+                        method: 'POST', 
+                        mode: 'no-cors', 
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify(payload) 
+                    });
+                    
+                    setUserData(prev => ({
+                        ...prev,
+                        nutrition: { calories: 0, protein: 0, water: 0 },
+                        workout: { ...prev.workout, steps: 0 },
+                        brainDump: "",
+                        weight: { ...prev.weight, bestSteps: newBestSteps }
+                    }));
+
+                    showStatus(`SYNCED TO ${userData.currentWeek.toUpperCase()}`, "success");
+                } catch (e) { showStatus("SYNC ERROR.", "error"); } finally { setSyncLoading(false); }
+            };
+
+            const totalLoss = (userData.weight.initial - userData.weight.current).toFixed(1);
+
+            return (
+                <div className="min-h-screen pb-44 animate-fade-in relative overflow-x-hidden">
+                    
+                    {showSplash && (
+                        <div id="splash-master">
+                            <img src="logo.png" className="w-48 mb-10 logo-glow" onError={(e) => e.target.style.display='none'} />
+                            <div className="max-w-xs px-6 text-center">
+                                <Icon name="quote" size={32} className="text-orange-500/20 mx-auto mb-6" />
+                                <h2 className="text-2xl font-black italic uppercase text-white leading-tight uppercase tracking-tight">
+                                    "{currentQuote}"
+                                </h2>
+                                <div className="mt-10 h-1.5 w-16 bg-orange-500 mx-auto rounded-full animate-bounce" />
+                            </div>
+                        </div>
+                    )}
+
+                    {statusMsg && (
+                        <div className={`fixed top-24 left-6 right-6 z-[110] p-5 rounded-[2rem] shadow-2xl flex items-center justify-between animate-in slide-in-from-top-12 duration-500 ${statusMsg.type === 'success' ? 'bg-emerald-600 text-white' : 'bg-red-600 text-white'}`}>
+                            <div className="flex items-center gap-4">
+                                <Icon name={statusMsg.type === 'success' ? "check-circle-2" : "alert-circle"} size={24} />
+                                <p className="text-sm font-black uppercase tracking-tight italic">{statusMsg.msg}</p>
+                            </div>
+                        </div>
+                    )}
+
+                    <header className="p-6 pt-12 flex justify-between items-center bg-slate-950/50 sticky top-0 z-40 backdrop-blur-xl border-b border-white/5">
+                        <div className="flex items-center gap-3">
+                            <img src="logo.png" className="w-10 h-10 logo-glow" onError={(e) => {e.target.style.display='none';}} />
+                            <div>
+                                <h1 className="text-lg font-black italic uppercase text-orange-500 tracking-tighter leading-none">MW COACHING</h1>
+                                <p className="text-[8px] font-bold text-slate-500 uppercase tracking-widest mt-1">6 Week Reset Hub</p>
+                            </div>
+                        </div>
+                        <button onClick={syncToPortal} className="bg-orange-500 text-white px-5 py-2.5 rounded-xl btn-active shadow-lg shadow-orange-500/30 flex items-center gap-2 text-[10px] font-black uppercase tracking-widest">
+                            {syncLoading ? <Icon name="loader-2" className="animate-spin" size={14} /> : <><Icon name="send" size={14} /> Sync & Reset</>}
+                        </button>
+                    </header>
+
+                    <main className="p-4 max-w-md mx-auto space-y-8">
+                        {activeTab === 'workout' && (
+                            <div className="space-y-8 animate-fade-in">
+                                <div className="grid grid-cols-2 gap-4">
+                                    <div className="glass-card p-6 rounded-[2.5rem] border-l-4 border-orange-500 shadow-xl">
+                                        <p className="text-[9px] font-black text-slate-500 uppercase mb-1 italic">Total Loss</p>
+                                        <h3 className="text-3xl font-black italic leading-none">{totalLoss}kg</h3>
+                                    </div>
+                                    <div className="glass-card p-6 rounded-[2.5rem] border-l-4 border-blue-500 text-right shadow-xl">
+                                        <p className="text-[9px] font-black text-slate-500 uppercase mb-1 italic">Step Record</p>
+                                        <h3 className="text-2xl font-black italic leading-none text-blue-400">{userData.weight.bestSteps.toLocaleString()}</h3>
+                                    </div>
+                                </div>
+
+                                <div onClick={() => handleManualInput('workout', 'steps')} 
+                                     className="bg-emerald-500 p-12 rounded-[4rem] text-white shadow-2xl active:scale-95 transition-all relative overflow-hidden text-center group cursor-pointer">
+                                    <div className="absolute top-0 right-0 p-8 opacity-10 group-hover:scale-125 transition-transform"><Icon name="footprints" size={140} /></div>
+                                    <p className="text-[10px] font-black uppercase tracking-[0.4em] mb-4 italic uppercase">Daily Steps (Tap to edit)</p>
+                                    <h3 className="text-8xl font-black tracking-tighter leading-none">{userData.workout.steps.toLocaleString()}</h3>
+                                </div>
+                            </div>
+                        )}
+
+                        {activeTab === 'eat' && (
+                            <div className="space-y-6 animate-fade-in pb-32">
+                                <div onClick={() => handleManualInput('nutrition', 'calories')} 
+                                     className="glass-card p-12 rounded-[4rem] text-center border border-white/10 shadow-sm relative overflow-hidden cursor-pointer btn-active">
+                                    <p className="text-slate-400 text-[10px] font-black uppercase mb-2 tracking-[0.2em] italic">Fuel Intake (Tap to edit)</p>
+                                    <h2 className="text-8xl font-black text-white tracking-tighter leading-none italic">{userData.nutrition.calories}</h2>
+                                    <p className="text-orange-500 text-[9px] font-black uppercase mt-4 tracking-[0.1em] italic">Total Kcal Today</p>
+                                </div>
+
+                                {/* Manual Log Card */}
+                                <div className="glass-card p-10 rounded-[3.5rem] border border-slate-100/10 shadow-sm flex flex-col items-center">
+                                    <p className="text-[10px] font-black text-slate-400 uppercase tracking-[0.4em] mb-6 italic">Quick Log Entry</p>
+                                    <div className="w-full space-y-4">
+                                        <input 
+                                            type="number"
+                                            inputMode="numeric"
+                                            placeholder="Enter Calories"
+                                            className="w-full bg-slate-900/50 border-none rounded-3xl p-6 text-2xl font-black placeholder:text-slate-700 text-center focus:bg-slate-800 transition-all text-white"
+                                            value={manualCalInput}
+                                            onChange={(e) => setManualCalInput(e.target.value)}
+                                        />
+                                        <button 
+                                            onClick={handleManualCalLog}
+                                            className="w-full bg-orange-500 text-white py-6 rounded-3xl font-black uppercase tracking-[0.2em] active:scale-95 transition-all shadow-xl shadow-orange-500/20 text-sm"
+                                        >Add to Fuel</button>
+                                    </div>
+                                </div>
+
+                                <div className="grid grid-cols-2 gap-4">
+                                    <div onClick={() => handleManualInput('nutrition', 'protein')} 
+                                         className="glass-card p-8 rounded-[3rem] text-center cursor-pointer active:scale-95 shadow-lg">
+                                        <p className="text-slate-400 text-[9px] font-black uppercase italic">Protein (g)</p>
+                                        <h2 className="text-4xl font-black text-white italic">{userData.nutrition.protein}</h2>
+                                    </div>
+                                    <div onClick={() => handleManualInput('nutrition', 'water')} 
+                                         className="glass-card p-8 rounded-[3rem] text-center cursor-pointer active:scale-95 shadow-lg">
+                                        <p className="text-slate-400 text-[9px] font-black uppercase italic">Water (L)</p>
+                                        <h2 className="text-4xl font-black text-white italic">{userData.nutrition.water}</h2>
+                                    </div>
+                                </div>
+                                <button onClick={() => setUserData({...userData, nutrition: {calories: 0, protein: 0, water: 0}})} 
+                                        className="w-full text-slate-500 font-black text-[10px] uppercase py-6 active:scale-95 italic tracking-widest uppercase">Reset Nutrition Hub</button>
+                            </div>
+                        )}
+
+                        {activeTab === 'stats' && (
+                            <div className="space-y-8 animate-fade-in pb-32">
+                                <div className="bg-slate-900/50 p-1.5 rounded-[2.5rem] flex gap-1 sticky top-0 z-10 backdrop-blur-2xl shadow-inner">
+                                    {['progress', 'measurements', 'setup'].map(t => (
+                                        <button key={t} onClick={() => setStatsSubTab(t)} className={`flex-1 py-4 px-1 rounded-[1.8rem] text-[8px] font-black uppercase tracking-widest transition-all ${statsSubTab === t ? 'bg-orange-500 text-white shadow-xl scale-105' : 'text-slate-500'}`}>
+                                            {t}
+                                        </button>
+                                    ))}
+                                </div>
+
+                                {statsSubTab === 'progress' && (
+                                    <div className="space-y-6 animate-fade-in">
+                                        <div className="glass-card p-8 rounded-[3rem] border-l-8 border-orange-500 shadow-sm">
+                                            <h3 className="text-[10px] font-black text-slate-400 uppercase mb-8 tracking-[0.2em] italic uppercase">Daily Wellness Scores</h3>
+                                            <div className="space-y-12">
+                                                <div>
+                                                    <div className="flex justify-between mb-3 text-[10px] font-black uppercase tracking-widest"><span>Sleep Quality</span><span className="text-orange-500 italic uppercase">{userData.wellness.sleep}/10</span></div>
+                                                    <input type="range" className="w-full" min="1" max="10" value={userData.wellness.sleep} onChange={(e) => setUserData({...userData, wellness: {...userData.wellness, sleep: parseInt(e.target.value)}})} />
+                                                </div>
+                                                <div>
+                                                    <div className="flex justify-between mb-3 text-[10px] font-black uppercase tracking-widest"><span>Energy Levels</span><span className="text-blue-500 italic uppercase">{userData.wellness.energy}/10</span></div>
+                                                    <input type="range" className="w-full" min="1" max="10" value={userData.wellness.energy} onChange={(e) => setUserData({...userData, wellness: {...userData.wellness, energy: parseInt(e.target.value)}})} />
+                                                </div>
+                                            </div>
+                                        </div>
+                                        <div className="glass-card p-8 rounded-[3rem]">
+                                            <div className="flex items-center gap-2 mb-4 font-black uppercase text-[10px] text-slate-400 italic uppercase">
+                                                <Icon name="message-square" size={16} /> Daily Brain Dump
+                                            </div>
+                                            <textarea className="w-full bg-slate-900/30 border border-white/5 rounded-2xl p-6 text-sm font-bold text-white placeholder:text-slate-700 min-h-[160px] resize-none focus:ring-0 shadow-inner" placeholder="Session flags? Focus? Successes?..." value={userData.brainDump} onChange={(e) => setUserData({...userData, brainDump: e.target.value})} />
+                                        </div>
+                                    </div>
+                                )}
+
+                                {statsSubTab === 'measurements' && (
+                                    <div className="space-y-6">
+                                        <div onClick={() => handleManualInput('weight', 'current')} className="glass-card p-12 rounded-[4rem] flex justify-between items-end cursor-pointer active:scale-95 border-l-4 border-emerald-500 shadow-xl">
+                                            <div><p className="text-[10px] font-black text-slate-400 uppercase mb-2 italic uppercase">Current Weight</p><h3 className="text-8xl font-black text-white tracking-tighter italic">{userData.weight.current}<span className="text-2xl font-medium text-slate-500 ml-2 italic">kg</span></h3></div>
+                                            <div className="bg-slate-900 text-white p-6 rounded-3xl mb-1 shadow-lg"><Icon name="refresh-cw" size={32} /></div>
+                                        </div>
+                                        <div className="grid grid-cols-2 gap-4">
+                                            {['waist', 'hips'].map(m => (
+                                                <div key={m} onClick={() => handleManualInput('measures', m)} className="glass-card p-10 rounded-[3.5rem] text-center cursor-pointer active:scale-95 shadow-md">
+                                                    <p className="text-[10px] font-black text-slate-400 uppercase mb-3 italic uppercase">{m}</p>
+                                                    <p className="text-5xl font-black text-white tracking-tighter">{userData.measures[m]}<span className="text-xs font-normal text-slate-500 ml-1 uppercase italic">cm</span></p>
+                                                    <p className="mt-4 text-[8px] font-black text-orange-500 uppercase italic uppercase">Update</p>
+                                                </div>
+                                            ))}
+                                        </div>
+                                    </div>
+                                )}
+
+                                {statsSubTab === 'setup' && (
+                                    <div className="glass-card p-10 rounded-[4rem] space-y-12 shadow-xl">
+                                        <div className="group text-left uppercase">
+                                            <label className="text-[11px] font-black text-slate-400 uppercase tracking-widest mb-4 block ml-4 italic">Target Week (MATCH SHEET TAB)</label>
+                                            <select className="w-full bg-slate-900/50 border border-white/10 rounded-[2.5rem] p-8 text-base font-black uppercase text-white focus:border-orange-500 outline-none appearance-none italic shadow-inner" value={userData.currentWeek} onChange={(e) => setUserData({...userData, currentWeek: e.target.value})}>
+                                                {["Week One Audit", "Week Two Audit", "Week Three Audit", "Week Four Audit", "Week Five Audit", "Week Six Audit"].map(w => (
+                                                    <option key={w} value={w}>{w}</option>
+                                                ))}
+                                            </select>
+                                        </div>
+                                        <div className="group text-left uppercase">
+                                            <label className="text-[11px] font-black text-slate-400 uppercase tracking-widest mb-4 block ml-4 italic uppercase">Client Name</label>
+                                            <input className="w-full bg-slate-900/50 border border-white/10 rounded-[2.5rem] p-8 text-base font-black text-white focus:border-orange-500 outline-none italic shadow-inner uppercase tracking-widest" value={userData.userName} onChange={(e) => setUserData({...userData, userName: e.target.value})} placeholder="e.g. MW" />
+                                        </div>
+                                        <div className="group text-left uppercase">
+                                            <label className="text-[11px] font-black text-slate-400 uppercase tracking-widest mb-4 block ml-4 italic uppercase">Portal Sync URL</label>
+                                            <input className="w-full bg-slate-950/50 border border-white/10 rounded-[2.5rem] p-8 text-[10px] font-bold text-white focus:border-orange-500 outline-none shadow-inner" value={userData.googleSheetUrl} onChange={(e) => setUserData({...userData, googleSheetUrl: e.target.value})} placeholder="https://script.google.com/..." />
+                                        </div>
+                                    </div>
+                                )}
+                            </div>
+                        )}
+                    </main>
+
+                    <nav className="fixed bottom-6 left-6 right-6 nav-dock border border-white/10 shadow-[0_40px_80px_-15px_rgba(0,0,0,0.6)] rounded-[4.5rem] p-2 flex justify-around items-center z-50">
+                        <button onClick={() => setActiveTab('workout')} className={`p-6 rounded-[3.5rem] transition-all duration-700 ${activeTab === 'workout' ? 'bg-orange-500 text-white shadow-2xl scale-125 -translate-y-4' : 'text-slate-500 hover:text-slate-300'}`}>
+                            <Icon name="zap" size={28} />
+                        </button>
+                        <button onClick={() => setActiveTab('eat')} className={`p-6 rounded-[3.5rem] transition-all duration-700 ${activeTab === 'eat' ? 'bg-orange-500 text-white shadow-2xl scale-125 -translate-y-4' : 'text-slate-300'}`}>
+                            <Icon name="utensils" size={28} />
+                        </button>
+                        <button onClick={() => setActiveTab('stats')} className={`p-6 rounded-[3.5rem] transition-all duration-700 ${activeTab === 'stats' ? 'bg-orange-500 text-white shadow-2xl scale-125 -translate-y-4' : 'text-slate-500'}`}>
+                            <Icon name="bar-chart-2" size={28} />
+                        </button>
+                    </nav>
+                </div>
+            );
+        };
+        const root = ReactDOM.createRoot(document.getElementById('root'));
+        root.render(<App />);
+    </script>
+</body>
+</html>
